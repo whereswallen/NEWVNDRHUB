@@ -6,6 +6,20 @@ import { hasBillingAccess } from "@/lib/billing";
 import { requireSession } from "@/lib/current-user";
 import { hasPermission, Role } from "@/lib/permissions";
 
+export async function requireCurrentOrganizationAccess({allowBillingOnly=false}:{allowBillingOnly?:boolean}={}) {
+  const session=await requireSession();
+  const [context]=await db.select({membership:memberships,organization:organizations}).from(memberships).innerJoin(organizations,eq(memberships.organizationId,organizations.id)).where(and(eq(memberships.userId,session.user.id),eq(memberships.status,"active"))).orderBy(memberships.createdAt).limit(1);
+  if(!context)redirect("/onboarding");
+  if(!allowBillingOnly&&!hasBillingAccess(context.organization))redirect("/app/billing?blocked=1");
+  return {session,...context};
+}
+
+export async function requireCurrentOrganizationPermission(permission:string,{allowBillingOnly=false}:{allowBillingOnly?:boolean}={}) {
+  const context=await requireCurrentOrganizationAccess({allowBillingOnly});
+  if(!hasPermission(context.membership.role as Role,permission,context.membership.permissions))redirect("/app");
+  return context;
+}
+
 export async function requirePlatformAdmin() {
   const session = await requireSession();
   const configuredEmail = process.env.VNDR_PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
@@ -15,6 +29,7 @@ export async function requirePlatformAdmin() {
   }
   const [admin] = await db.select().from(platformAdmins).where(eq(platformAdmins.userId, session.user.id)).limit(1);
   if (!admin) redirect("/app");
+  if (process.env.REQUIRE_PLATFORM_ADMIN_MFA === "true" && !session.user.twoFactorEnabled) redirect("/app?error=platform_mfa_required");
   return { session, admin };
 }
 
