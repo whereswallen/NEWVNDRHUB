@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { memberships, organizations, platformAdmins, stores } from "@/db/schema";
+import { memberships, organizations, platformAdmins, stores, vendors } from "@/db/schema";
 import { hasBillingAccess } from "@/lib/billing";
 import { requireSession } from "@/lib/current-user";
 import { hasPermission, Role } from "@/lib/permissions";
@@ -18,6 +18,13 @@ export async function requireCurrentOrganizationPermission(permission:string,{al
   const context=await requireCurrentOrganizationAccess({allowBillingOnly});
   if(!hasPermission(context.membership.role as Role,permission,context.membership.permissions))redirect("/app");
   return context;
+}
+
+export async function requireVendorAccess() {
+  const session=await requireSession();
+  const [context]=await db.select({membership:memberships,vendor:vendors,organization:organizations,store:stores}).from(memberships).innerJoin(vendors,eq(memberships.vendorId,vendors.id)).innerJoin(organizations,eq(memberships.organizationId,organizations.id)).innerJoin(stores,eq(memberships.storeId,stores.id)).where(and(eq(memberships.userId,session.user.id),eq(memberships.role,"vendor"),eq(memberships.status,"active"))).orderBy(memberships.createdAt).limit(1);
+  if(!context||!hasBillingAccess(context.organization))redirect("/app/billing?blocked=1");
+  return {session,...context};
 }
 
 export async function requirePlatformAdmin() {
