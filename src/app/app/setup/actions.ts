@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { auditLog, invitations, organizations, rentalAssignments, rentalSpaces, stores, storeTaxComponents, vendors } from "@/db/schema";
 import { requireOrganizationPermission } from "@/lib/access";
 import { canAddVendor, Plan } from "@/lib/entitlements";
+import { sendInvitationEmail } from "@/lib/email";
 
 const storeInput=z.object({organizationId:z.string().uuid(),name:z.string().trim().min(2).max(100),province:z.string().trim().length(2).transform(v=>v.toUpperCase()),timezone:z.string().min(3).max(80)});
 const spaceInput=z.object({organizationId:z.string().uuid(),storeId:z.string().uuid(),name:z.string().trim().min(1).max(100),sizeCategory:z.string().trim().max(50).optional(),dimensions:z.string().trim().max(100).optional(),monthlyRent:z.coerce.number().min(0).max(100000)});
@@ -62,5 +63,6 @@ export async function createVendorAndInvitation(formData:FormData){
     await tx.insert(auditLog).values({organizationId:organization.id,storeId:store.id,actorUserId:session.user.id,action:"vendor.created",entityType:"vendor",entityId:vendor.id,payload:{commissionRate:parsed.data.commissionRate,spaceId:parsed.data.spaceId||null}});
   });}catch{redirect("/app/setup?error=vendor");}
   const baseUrl=process.env.NEXT_PUBLIC_APP_URL??"http://localhost:3000";
-  redirect(`/app/setup?vendorInvitation=${encodeURIComponent(`${baseUrl}/invite/${token}`)}`);
+  const url=`${baseUrl}/invite/${token}`;const [organization]=await db.select().from(organizations).where(eq(organizations.id,parsed.data.organizationId)).limit(1);const [store]=await db.select().from(stores).where(eq(stores.id,parsed.data.storeId)).limit(1);let delivery="sent";try{await sendInvitationEmail({to:parsed.data.email,organizationName:organization.name,storeName:store.name,role:"vendor",url})}catch{delivery="failed"}
+  redirect(`/app/setup?vendorInvitation=${encodeURIComponent(url)}&delivery=${delivery}`);
 }

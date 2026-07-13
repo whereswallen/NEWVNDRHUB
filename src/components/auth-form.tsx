@@ -24,7 +24,7 @@ export function AuthForm({ mode, next = "/app" }: { mode: "sign-in" | "sign-up";
     setPending(false);
     if (result.error) return setError(result.error.message ?? "We could not complete that request.");
     const destination = next.startsWith("/") && !next.startsWith("//") ? next : "/app";
-    router.push(signingUp && destination === "/app" ? "/onboarding" : destination);
+    router.push(signingUp ? `/verify-email?email=${encodeURIComponent(email)}` : destination);
     router.refresh();
   }
 
@@ -40,6 +40,7 @@ export function AuthForm({ mode, next = "/app" }: { mode: "sign-in" | "sign-up";
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="primary-button" disabled={pending}>{pending ? "Please wait..." : signingUp ? "Create account" : "Sign in"}</button>
     </form>
+    {!signingUp&&<p className="switch-link"><Link href="/forgot-password">Forgot your password?</Link></p>}
     <p className="switch-link">{signingUp ? "Already have an account?" : "New to VNDR Hub?"} <Link href={`${signingUp ? "/sign-in" : "/sign-up"}?next=${encodeURIComponent(next)}`}>{signingUp ? "Sign in" : "Create an account"}</Link></p>
   </section></main>;
 }

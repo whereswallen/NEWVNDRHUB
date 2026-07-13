@@ -1,0 +1,1 @@
+import {ResetPassword} from "@/components/password-recovery";export default async function Page({searchParams}:{searchParams:Promise<{token?:string}>}){const {token=""}=await searchParams;return <ResetPassword token={token}/>}
