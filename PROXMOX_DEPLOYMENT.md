@@ -4,19 +4,19 @@ Use a dedicated Debian 12 or Ubuntu 24.04 virtual machine. Allocate at least 2 C
 
 ## First deployment
 
-1. Point the Cloudflare `app` DNS record to the VM public IP and enable the proxy.
-2. Set Cloudflare SSL mode to Full strict.
-3. Forward inbound TCP ports 80 and 443 from the router to the VM. Do not expose PostgreSQL port 5432.
+1. Create a Cloudflare Tunnel and copy `cloudflared/config.yml.example` to `/etc/cloudflared/config.yml`. Route `app.vndrhub.ca` to the tunnel. Do not create router port forwards for this VM.
+2. Keep Cloudflare SSL mode at Full strict and enable the proxy.
+3. Allow no inbound Internet ports to the VM. Docker binds the origin only to loopback; PostgreSQL is never exposed.
 4. Clone the private VNDR Hub repository into `/opt/vndrhub`.
 5. Run `chmod +x scripts/*.sh`.
 6. Run `./scripts/prepare-proxmox.sh YOUR_ADMIN_EMAIL`.
 7. Edit `.env.production` directly on the server. Leave the first credential in an optional integration group empty until that integration is ready.
-8. Run `./scripts/deploy-production.sh`.
-9. Confirm `https://app.vndrhub.ca/api/health/ready` returns `{"status":"ready"}`.
+8. Run `./scripts/security-readiness.sh`, then `./scripts/deploy-production.sh`.
+9. Confirm `https://app.vndrhub.ca/api/health/ready` returns `{"status":"ready"}` and run `./scripts/verify-backup.sh` against a newly created encrypted backup.
 
 ## Backups
 
-Run `./scripts/backup-production.sh` from cron every night. Copy the resulting encrypted backup off the VM. A backup stored only on the same Proxmox host is not sufficient. Test `restore-production.sh` against a disposable VM before relying on it.
+Run `./scripts/backup-production.sh` from cron every night with Restic configured for off-site storage. A backup stored only on the same Proxmox host is not sufficient. Test `./scripts/verify-backup.sh backups/FILE.dump.age` and a full restore against a disposable VM before relying on it.
 
 ## Updates and rollback
 
@@ -24,4 +24,4 @@ Before every update, create a backup. Pull the reviewed Git commit and run `depl
 
 ## Cloudflare
 
-Keep the DNS proxy enabled, use Full strict TLS, enable Always Use HTTPS, and configure a WAF rate limit for `/api/auth/*`. Caddy obtains and renews the origin certificate and sends strict security headers.
+Keep the DNS proxy enabled, use Full strict TLS, enable Always Use HTTPS, and configure Cloudflare WAF rate limits for `/api/auth/*`, `/sign-up`, and `/forgot-password`. The Tunnel is the only permitted path to the origin.
