@@ -61,3 +61,5 @@ Configure the Stripe webhook endpoint as `/api/stripe/webhook` and subscribe it 
 `docker-compose.production.yml` binds the application only to localhost so a TLS reverse proxy can safely expose it. Keep `secrets/`, `.env.production`, and database dumps outside source control. Monitor `/api/health/live` for process health and `/api/health/ready` for database readiness.
 
 Run `scripts/backup-database.sh` on a schedule with encrypted off-server storage. Test restoration regularly with `scripts/restore-database.sh` against a disposable database before relying on any backup.
+
+Copy `.env.production.example` to `.env.production`, replace every placeholder, and run `npm run env:check` before deployment. Point the DNS A or AAAA record for `app.vndrhub.ca` at the host. Caddy then obtains and renews HTTPS certificates automatically. Configure SPF, DKIM, and DMARC with the transactional email provider before sending from `hello@vndrhub.ca`.
