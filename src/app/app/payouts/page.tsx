@@ -2,11 +2,10 @@ import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { memberships, organizations, payouts, vendors } from "@/db/schema";
-import { requireSession } from "@/lib/current-user";
+import { payouts, vendors } from "@/db/schema";
+import { requireCurrentOrganizationPermission } from "@/lib/access";
 import { formatCad } from "@/lib/money";
 import { payoutMonth } from "@/lib/payout-calculations";
-import { hasPermission, Role } from "@/lib/permissions";
 import { finalizePayout, markPayoutPaid } from "./actions";
 
 export default async function PayoutsPage({
@@ -14,34 +13,10 @@ export default async function PayoutsPage({
 }: {
   searchParams: Promise<{ month?: string; error?: string; finalized?: string }>;
 }) {
-  const session = await requireSession();
   const query = await searchParams;
   const range = payoutMonth(query.month);
-  const [context] = await db
-    .select({ membership: memberships, organization: organizations })
-    .from(memberships)
-    .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
-    .where(
-      and(
-        eq(memberships.userId, session.user.id),
-        eq(memberships.status, "active"),
-      ),
-    )
-    .limit(1);
-  if (
-    !context ||
-    !hasPermission(
-      context.membership.role as Role,
-      "payouts:read",
-      context.membership.permissions,
-    )
-  )
-    redirect("/app");
-  const canFinalize = hasPermission(
-    context.membership.role as Role,
-    "payouts:write",
-    context.membership.permissions,
-  );
+  const context = await requireCurrentOrganizationPermission("payouts:read");
+  const canFinalize = context.membership.role === "owner" || context.membership.role === "platform_admin";
   const vendorScope = [eq(vendors.organizationId, context.organization.id)];
   if (context.membership.storeId)
     vendorScope.push(eq(vendors.storeId, context.membership.storeId));

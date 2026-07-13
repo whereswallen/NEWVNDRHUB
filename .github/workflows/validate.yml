@@ -1,4 +1,6 @@
 name: Validate
+permissions:
+  contents: read
 on:
   pull_request:
   push:
@@ -13,8 +15,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Reject committed private keys and production secrets
+        run: |
+          if git grep -nE -- 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|sk_live_[A-Za-z0-9]+|sq0atp-[A-Za-z0-9_-]+' -- ':!package-lock.json'; then
+            echo "Potential production secret detected" >&2
+            exit 1
+          fi
       - run: npm run build
         env:
           DATABASE_URL: postgres://unused:unused@localhost:5432/unused

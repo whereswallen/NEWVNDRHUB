@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
@@ -19,10 +19,10 @@ export async function completeOnboarding(formData: FormData) {
   const session = await requireSession();
   const input = onboardingSchema.safeParse(Object.fromEntries(formData));
   if (!input.success) redirect("/onboarding?error=invalid");
-  const existing = await db.query.memberships.findFirst({ where: eq(memberships.userId, session.user.id) });
-  if (existing) redirect("/app");
-
-  await db.transaction(async tx => {
+  try { await db.transaction(async tx => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${session.user.id}))`);
+    const existing = await tx.query.memberships.findFirst({ where: eq(memberships.userId, session.user.id) });
+    if (existing) throw new Error("Already onboarded");
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
     const [organization] = await tx.insert(organizations).values({
       name: input.data.organizationName,
@@ -50,6 +50,6 @@ export async function completeOnboarding(formData: FormData) {
       entityId: organization.id,
       payload: { plan: input.data.plan },
     });
-  });
+  }); } catch { redirect("/app"); }
   redirect("/app");
 }

@@ -10,6 +10,10 @@
   }
   log {
     output stdout
-    format json
+    format filter {
+      request>uri query {
+        replace REDACTED
+      }
+    }
   }
 }

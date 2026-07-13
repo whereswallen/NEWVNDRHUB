@@ -2,13 +2,17 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { memberships, payouts, vendors } from "@/db/schema";
+import { auditLog, memberships, organizations, payouts, vendors } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { hasBillingAccess } from "@/lib/billing";
 import { payoutMonth } from "@/lib/payout-calculations";
 import { hasPermission, Role } from "@/lib/permissions";
 
-const csv = (value: unknown) =>
-  `"${String(value ?? "").replaceAll('"', '""')}"`;
+const csv = (value: unknown) => {
+  let safe=String(value ?? "");
+  if(/^[=+\-@\t\r]/.test(safe))safe=`'${safe}`;
+  return `"${safe.replaceAll('"', '""')}"`;
+};
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session)
@@ -32,6 +36,8 @@ export async function GET(request: NextRequest) {
     )
   )
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const [organization]=await db.select().from(organizations).where(eq(organizations.id,membership.organizationId)).limit(1);
+  if(!organization||!hasBillingAccess(organization))return NextResponse.json({error:"Organization unavailable"},{status:403});
   const range = payoutMonth(
     request.nextUrl.searchParams.get("month") ?? undefined,
   );
@@ -82,6 +88,7 @@ export async function GET(request: NextRequest) {
         .join(","),
     ),
   ];
+  await db.insert(auditLog).values({organizationId:membership.organizationId,storeId:membership.storeId,actorUserId:session.user.id,action:"payout.csv_exported",entityType:"organization",entityId:membership.organizationId,payload:{month:range.value,rows:rows.length}});
   return new NextResponse(`\ufeff${lines.join("\r\n")}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

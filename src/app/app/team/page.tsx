@@ -1,15 +1,13 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { invitations, memberships, organizations, stores, users } from "@/db/schema";
-import { requireSession } from "@/lib/current-user";
+import { invitations, memberships, stores, users } from "@/db/schema";
+import { requireCurrentOrganizationPermission } from "@/lib/access";
 import { hasPermission, Role } from "@/lib/permissions";
 import { createEmployeeInvitation, revokeInvitation } from "./actions";
 
 export default async function TeamPage({searchParams}:{searchParams:Promise<{invitation?:string,error?:string,delivery?:string}>}){
-  const session=await requireSession();
-  const [context]=await db.select({membership:memberships,organization:organizations}).from(memberships).innerJoin(organizations,eq(memberships.organizationId,organizations.id)).where(and(eq(memberships.userId,session.user.id),eq(memberships.status,"active"))).limit(1);
-  if(!context||!hasPermission(context.membership.role as Role,"team:read",context.membership.permissions)) redirect("/app");
+  const context=await requireCurrentOrganizationPermission("team:read");
   const canManage=hasPermission(context.membership.role as Role,"team:manage",context.membership.permissions);
   const storeRows=await db.select().from(stores).where(eq(stores.organizationId,context.organization.id));
   const team=await db.select({id:memberships.id,name:users.name,email:users.email,role:memberships.role,storeName:stores.name}).from(memberships).innerJoin(users,eq(memberships.userId,users.id)).leftJoin(stores,eq(memberships.storeId,stores.id)).where(eq(memberships.organizationId,context.organization.id));
