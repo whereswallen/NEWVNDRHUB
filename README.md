@@ -55,3 +55,9 @@ Run `npm run db:generate` only after changing the schema, then review the genera
 Never commit secrets. Production requires HTTPS, managed backups, tested restoration, monitoring, email delivery, Stripe webhook verification, and a security review.
 
 Configure the Stripe webhook endpoint as `/api/stripe/webhook` and subscribe it to `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`. Create three recurring CAD prices and place their IDs in the matching environment variables.
+
+## Production operations
+
+`docker-compose.production.yml` binds the application only to localhost so a TLS reverse proxy can safely expose it. Keep `secrets/`, `.env.production`, and database dumps outside source control. Monitor `/api/health/live` for process health and `/api/health/ready` for database readiness.
+
+Run `scripts/backup-database.sh` on a schedule with encrypted off-server storage. Test restoration regularly with `scripts/restore-database.sh` against a disposable database before relying on any backup.
