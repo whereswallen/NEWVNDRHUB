@@ -62,6 +62,8 @@ Configure the Stripe webhook endpoint as `/api/stripe/webhook` and subscribe it 
 
 Run `scripts/backup-database.sh` on a schedule with encrypted off-server storage. Test restoration regularly with `scripts/restore-database.sh` against a disposable database before relying on any backup.
 
+For a clean Proxmox VM deployment behind Cloudflare, follow `PROXMOX_DEPLOYMENT.md`. The production entrypoint constructs the database connection from a Docker secret, applies migrations before startup, and refuses to start when migrations fail.
+
 Copy `.env.production.example` to `.env.production`, replace every placeholder, and run `npm run env:check` before deployment. Point the DNS A or AAAA record for `app.vndrhub.ca` at the host. Caddy then obtains and renews HTTPS certificates automatically. Configure SPF, DKIM, and DMARC with the transactional email provider before sending from `hello@vndrhub.ca`.
 
 Square support uses the Sandbox by default. Configure the application access token, CAD location ID, webhook signature key, and exact webhook URL. Subscribe to `payment.created` and `payment.updated`. VNDR Hub validates Square's HMAC signature using the exact notification URL and stores webhook event IDs for idempotency. Production multi-merchant onboarding still requires Square OAuth before external stores can connect their own accounts.

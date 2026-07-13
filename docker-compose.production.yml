@@ -16,6 +16,12 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env.production
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_NAME: vndrhub
+      DATABASE_USER: vndrhub
+      DATABASE_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
