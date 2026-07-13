@@ -1,0 +1,3 @@
+export type Role="platform_admin"|"owner"|"manager"|"staff"|"vendor";
+export const rolePermissions:Record<Role,readonly string[]>={platform_admin:["platform:*"],owner:["store:*"],manager:["pos:sell","inventory:read","inventory:write","vendors:read","vendors:write","sales:read","payouts:read","reports:read"],staff:["pos:sell","inventory:read","sales:read"],vendor:["own_inventory:read","own_inventory:write","own_sales:read","own_payouts:read"]};
+export function hasPermission(role:Role,permission:string,overrides:Record<string,boolean>={}){if(permission in overrides)return overrides[permission];const grants=rolePermissions[role];return grants.includes(permission)||grants.includes("platform:*")||grants.includes("store:*")}
