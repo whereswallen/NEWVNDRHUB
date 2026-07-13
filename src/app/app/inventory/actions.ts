@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { auditLog, inventoryMovements, memberships, products, stores, vendors } from "@/db/schema";
-import { requireSession } from "@/lib/current-user";
+import { auditLog, inventoryMovements, products, stores, vendors } from "@/db/schema";
+import { requireOrganizationAccess } from "@/lib/access";
 import { hasPermission, Role } from "@/lib/permissions";
 import { csvRecords } from "@/lib/csv";
 
@@ -14,9 +14,8 @@ const productInput=z.object({organizationId:z.string().uuid(),storeId:z.string()
 const adjustmentInput=z.object({organizationId:z.string().uuid(),productId:z.string().uuid(),quantityDelta:z.coerce.number().int().min(-1000000).max(1000000).refine(v=>v!==0),reason:z.enum(["received","correction","damaged","returned","vendor_removed"])});
 
 async function inventoryContext(organizationId:string){
-  const session=await requireSession();
-  const [membership]=await db.select().from(memberships).where(and(eq(memberships.userId,session.user.id),eq(memberships.organizationId,organizationId),eq(memberships.status,"active"))).limit(1);
-  if(!membership)redirect("/app");return{session,membership,role:membership.role as Role};
+  const {session,membership}=await requireOrganizationAccess(organizationId);
+  return{session,membership,role:membership.role as Role};
 }
 
 export async function createProduct(formData:FormData){
