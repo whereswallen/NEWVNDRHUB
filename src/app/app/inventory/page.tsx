@@ -2,14 +2,14 @@ import { and, eq, sql } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { inventoryMovements, memberships, organizations, products, stores, vendors } from "@/db/schema";
-import { requireSession } from "@/lib/current-user";
+import { inventoryMovements, products, stores, vendors } from "@/db/schema";
+import { requireCurrentOrganizationAccess } from "@/lib/access";
 import { formatCad } from "@/lib/money";
 import { hasPermission, Role } from "@/lib/permissions";
 import { adjustInventory, createProduct, importInventoryCsv } from "./actions";
 
 export default async function InventoryPage({searchParams}:{searchParams:Promise<{error?:string,imported?:string}>}){
-  const session=await requireSession();const [context]=await db.select({membership:memberships,organization:organizations}).from(memberships).innerJoin(organizations,eq(memberships.organizationId,organizations.id)).where(and(eq(memberships.userId,session.user.id),eq(memberships.status,"active"))).limit(1);if(!context)redirect("/app");
+  const context=await requireCurrentOrganizationAccess();
   const role=context.membership.role as Role;const canAll=hasPermission(role,"inventory:write",context.membership.permissions);const canOwn=hasPermission(role,"own_inventory:write",context.membership.permissions);const canWrite=canAll||canOwn;
   const scope=[eq(products.organizationId,context.organization.id)];if(context.membership.storeId)scope.push(eq(products.storeId,context.membership.storeId));if(role==="vendor"&&context.membership.vendorId)scope.push(eq(products.vendorId,context.membership.vendorId));
   const rows=await db.select({product:products,vendorName:vendors.businessName,storeName:stores.name,quantity:sql<number>`coalesce(sum(${inventoryMovements.quantityDelta}),0)`}).from(products).innerJoin(vendors,eq(products.vendorId,vendors.id)).innerJoin(stores,eq(products.storeId,stores.id)).leftJoin(inventoryMovements,eq(inventoryMovements.productId,products.id)).where(and(...scope)).groupBy(products.id,vendors.businessName,stores.name).orderBy(products.name);
