@@ -2,18 +2,15 @@ import { and, eq, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { memberships, organizations, rentalAssignments, rentalSpaces, stores, storeTaxComponents, vendors } from "@/db/schema";
+import { rentalAssignments, rentalSpaces, stores, storeTaxComponents, vendors } from "@/db/schema";
 import { additionalStorefrontCostCents } from "@/lib/entitlements";
-import { requireSession } from "@/lib/current-user";
+import { requireCurrentOrganizationPermission } from "@/lib/access";
 import { hasPermission, Role } from "@/lib/permissions";
 import { createRentalSpace, createStorefront, createVendorAndInvitation, saveStoreProfile, saveTaxComponent } from "./actions";
 
 const provinces=["AB","BC","MB","NB","NL","NS","NT","NU","ON","PE","QC","SK","YT"];
 export default async function SetupPage({searchParams}:{searchParams:Promise<{vendorInvitation?:string,error?:string,delivery?:string}>}){
-  const session=await requireSession();
-  const [context]=await db.select({membership:memberships,organization:organizations}).from(memberships).innerJoin(organizations,eq(memberships.organizationId,organizations.id)).where(and(eq(memberships.userId,session.user.id),eq(memberships.status,"active"))).limit(1);
-  if(!context)redirect("/app");const role=context.membership.role as Role;const permits=(permission:string)=>hasPermission(role,permission,context.membership.permissions);
-  if(!permits("vendors:read"))redirect("/app");
+  const context=await requireCurrentOrganizationPermission("vendors:read");const role=context.membership.role as Role;const permits=(permission:string)=>hasPermission(role,permission,context.membership.permissions);
   const storeRows=await db.select().from(stores).where(eq(stores.organizationId,context.organization.id));
   const spaceRows=await db.select({space:rentalSpaces,storeName:stores.name}).from(rentalSpaces).innerJoin(stores,eq(rentalSpaces.storeId,stores.id)).where(eq(stores.organizationId,context.organization.id));
   const taxRows=await db.select({tax:storeTaxComponents,storeName:stores.name}).from(storeTaxComponents).innerJoin(stores,eq(storeTaxComponents.storeId,stores.id)).where(eq(stores.organizationId,context.organization.id));
