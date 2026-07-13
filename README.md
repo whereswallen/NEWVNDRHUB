@@ -21,6 +21,11 @@ Self-hostable consignment retail SaaS. The existing Sites application remains th
 - Store-scoped manager and staff invitations with hashed, expiring tokens
 - Role-specific navigation that keeps POS away from vendor accounts
 - Employee acceptance flow locked to the invited email address
+- Multi-storefront setup with the $20 CAD additional-location calculation
+- Rentable spaces with size, dimensions, and configurable monthly rates
+- Vendor creation with concurrency-safe plan-limit enforcement
+- Historical rental assignments that snapshot the agreed monthly rent
+- Email-locked vendor invitations and an isolated vendor portal
 - PostgreSQL migration in `drizzle/`
 - Core store, vendor, rental space, inventory, sale, commission, and audit models
 

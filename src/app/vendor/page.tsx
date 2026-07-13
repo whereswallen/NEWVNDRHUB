@@ -1,0 +1,15 @@
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import { db } from "@/db";
+import { inventoryMovements, memberships, organizations, products, rentalAssignments, rentalSpaces, stores, vendors } from "@/db/schema";
+import { requireSession } from "@/lib/current-user";
+import { SignOutButton } from "@/components/sign-out-button";
+
+export default async function VendorPortalPage(){
+  const session=await requireSession();
+  const [context]=await db.select({membership:memberships,vendor:vendors,organization:organizations,store:stores}).from(memberships).innerJoin(vendors,eq(memberships.vendorId,vendors.id)).innerJoin(organizations,eq(memberships.organizationId,organizations.id)).innerJoin(stores,eq(memberships.storeId,stores.id)).where(and(eq(memberships.userId,session.user.id),eq(memberships.role,"vendor"),eq(memberships.status,"active"))).limit(1);
+  if(!context)redirect("/app");
+  const productRows=await db.select({id:products.id,sku:products.sku,name:products.name,priceCents:products.priceCents,status:products.status,quantity:sql<number>`coalesce(sum(${inventoryMovements.quantityDelta}),0)`}).from(products).leftJoin(inventoryMovements,eq(inventoryMovements.productId,products.id)).where(and(eq(products.vendorId,context.vendor.id),eq(products.organizationId,context.organization.id),eq(products.storeId,context.store.id))).groupBy(products.id);
+  const [rent]=await db.select({spaceName:rentalSpaces.name,monthlyRentCents:rentalAssignments.monthlyRentCents}).from(rentalAssignments).innerJoin(rentalSpaces,eq(rentalAssignments.spaceId,rentalSpaces.id)).where(and(eq(rentalAssignments.vendorId,context.vendor.id),isNull(rentalAssignments.endsAt))).limit(1);
+  return <main className="management-shell"><header><div><p className="eyebrow">VENDOR PORTAL</p><h1>{context.vendor.businessName}</h1><p className="muted">{context.organization.name} · {context.store.name} · Vendor {context.vendor.code}</p></div><SignOutButton/></header><section className="metric-grid"><article><span>Products</span><b>{productRows.length}</b></article><article><span>Commission</span><b>{context.vendor.commissionRate}%</b></article><article><span>Monthly rent</span><b>{rent?`$${(rent.monthlyRentCents/100).toFixed(2)}`:"None"}</b></article></section>{rent&&<section className="notice"><b>Current rental space</b><p>{rent.spaceName}. The agreed monthly amount is preserved for this assignment.</p></section>}<section className="management-card"><h2>Your inventory</h2><p className="muted">Only products assigned to your vendor account appear here.</p><div className="data-list">{productRows.length?productRows.map(product=><div key={product.id}><span><b>{product.name}</b><small>{product.sku} · {product.status}</small></span><span><b>{Number(product.quantity)} in stock</b><small>${(product.priceCents/100).toFixed(2)}</small></span></div>):<p className="muted">No products have been added yet.</p>}</div></section></main>;
+}

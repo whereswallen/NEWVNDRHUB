@@ -1,0 +1,1 @@
+ALTER TABLE "invitations" ADD COLUMN "vendor_id" uuid;
