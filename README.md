@@ -41,6 +41,10 @@ Self-hostable consignment retail SaaS. The existing Sites application remains th
 - Payment references, notes, paid timestamps, and audit events
 - Store-scoped payout access for managers
 - Vendor payout history and UTF-8 CSV exports
+- Stripe Checkout for Standard, Unlimited, and additional storefront subscriptions
+- Stripe customer billing portal
+- Signed, idempotent Stripe subscription webhooks
+- Server-side trial and billing-status enforcement for protected mutations
 - PostgreSQL migration in `drizzle/`
 - Core store, vendor, rental space, inventory, sale, commission, and audit models
 
@@ -49,3 +53,5 @@ Generate `BETTER_AUTH_SECRET` with at least 32 random characters. Set `BETTER_AU
 Run `npm run db:generate` only after changing the schema, then review the generated SQL before migrating.
 
 Never commit secrets. Production requires HTTPS, managed backups, tested restoration, monitoring, email delivery, Stripe webhook verification, and a security review.
+
+Configure the Stripe webhook endpoint as `/api/stripe/webhook` and subscribe it to `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`. Create three recurring CAD prices and place their IDs in the matching environment variables.

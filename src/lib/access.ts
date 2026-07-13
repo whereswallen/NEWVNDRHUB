@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { memberships, platformAdmins } from "@/db/schema";
+import { memberships, organizations, platformAdmins } from "@/db/schema";
+import { hasBillingAccess } from "@/lib/billing";
 import { requireSession } from "@/lib/current-user";
 import { hasPermission, Role } from "@/lib/permissions";
 
@@ -20,5 +21,7 @@ export async function requireOrganizationPermission(organizationId: string, perm
   const session = await requireSession();
   const [membership] = await db.select().from(memberships).where(and(eq(memberships.userId, session.user.id),eq(memberships.organizationId, organizationId),eq(memberships.status,"active"))).limit(1);
   if (!membership || !hasPermission(membership.role as Role, permission, membership.permissions)) redirect("/app");
+  const [organization]=await db.select().from(organizations).where(eq(organizations.id,organizationId)).limit(1);
+  if(!organization||(!hasBillingAccess(organization)&&permission!=="billing:manage"))redirect("/app/billing?blocked=1");
   return { session, membership };
 }
