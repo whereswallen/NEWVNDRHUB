@@ -3,8 +3,6 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
   inventoryMovements,
-  memberships,
-  organizations,
   products,
   refundItems,
   refunds,
@@ -15,32 +13,12 @@ import {
   stores,
   vendors,
 } from "@/db/schema";
-import { requireSession } from "@/lib/current-user";
+import { requireVendorAccess } from "@/lib/access";
 import { formatCad } from "@/lib/money";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function VendorPortalPage() {
-  const session = await requireSession();
-  const [context] = await db
-    .select({
-      membership: memberships,
-      vendor: vendors,
-      organization: organizations,
-      store: stores,
-    })
-    .from(memberships)
-    .innerJoin(vendors, eq(memberships.vendorId, vendors.id))
-    .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
-    .innerJoin(stores, eq(memberships.storeId, stores.id))
-    .where(
-      and(
-        eq(memberships.userId, session.user.id),
-        eq(memberships.role, "vendor"),
-        eq(memberships.status, "active"),
-      ),
-    )
-    .limit(1);
-  if (!context) redirect("/app");
+  const context = await requireVendorAccess();
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const end = new Date(
