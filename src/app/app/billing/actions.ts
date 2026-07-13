@@ -31,3 +31,11 @@ export async function openBillingPortal(formData:FormData){
   if(!organization?.stripeCustomerId)redirect("/app/billing?error=no_customer");
   const portal=await getStripe().billingPortal.sessions.create({customer:organization.stripeCustomerId,return_url:`${process.env.NEXT_PUBLIC_APP_URL}/app/billing`});redirect(portal.url);
 }
+
+export async function syncStorefrontBilling(formData:FormData){
+  const organizationId=String(formData.get("organizationId"));await requireOrganizationPermission(organizationId,"billing:manage");
+  const [organization]=await db.select().from(organizations).where(eq(organizations.id,organizationId)).limit(1);if(!organization?.stripeSubscriptionId)redirect("/app/billing?error=no_subscription");
+  const priceId=process.env.STRIPE_STOREFRONT_PRICE_ID;if(!priceId)throw new Error("Stripe storefront price is not configured");const stripe=getStripe();const subscription=await stripe.subscriptions.retrieve(organization.stripeSubscriptionId);const [{value}]=await db.select({value:count()}).from(stores).where(eq(stores.organizationId,organizationId));const quantity=storefrontQuantity(Number(value));const item=subscription.items.data.find(row=>row.price.id===priceId);
+  if(item&&quantity>0)await stripe.subscriptionItems.update(item.id,{quantity,proration_behavior:"create_prorations"});else if(item)await stripe.subscriptionItems.del(item.id,{proration_behavior:"create_prorations"});else if(quantity>0)await stripe.subscriptionItems.create({subscription:subscription.id,price:priceId,quantity,proration_behavior:"create_prorations"});
+  redirect("/app/billing?synced=1");
+}

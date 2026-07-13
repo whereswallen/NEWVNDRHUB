@@ -15,3 +15,9 @@ export function stripePriceForPlan(plan:"standard"|"unlimited"){
 }
 
 export function storefrontQuantity(count:number){return Math.max(0,count-1)}
+
+export function planFromPriceIds(priceIds:string[],prices:{standard?:string;unlimited?:string}){
+  if(prices.unlimited&&priceIds.includes(prices.unlimited))return "unlimited" as const;
+  if(prices.standard&&priceIds.includes(prices.standard))return "standard" as const;
+  return null;
+}
