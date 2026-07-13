@@ -4,17 +4,15 @@ import { and, eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { auditLog, inventoryMovements, memberships, products, saleItems, sales, stores, storeTaxComponents, vendors } from "@/db/schema";
-import { requireSession } from "@/lib/current-user";
-import { hasPermission, Role } from "@/lib/permissions";
+import { auditLog, inventoryMovements, products, saleItems, sales, stores, storeTaxComponents, vendors } from "@/db/schema";
+import { requireStorePermission } from "@/lib/access";
 import { calculateLine } from "@/lib/sale-calculations";
 
-const checkoutInput=z.object({organizationId:z.string().uuid(),storeId:z.string().uuid(),idempotencyKey:z.string().uuid(),paymentMethod:z.enum(["cash","card","external"]),cart:z.string().max(100000)});
+const checkoutInput=z.object({organizationId:z.string().uuid(),storeId:z.string().uuid(),idempotencyKey:z.string().uuid(),paymentMethod:z.literal("cash"),cart:z.string().max(100000)});
 const cartInput=z.array(z.object({productId:z.string().uuid(),quantity:z.number().int().positive().max(1000)})).min(1).max(200);
 
 export async function completeSale(formData:FormData){
-  const parsed=checkoutInput.safeParse(Object.fromEntries(formData));if(!parsed.success)redirect("/app/pos?error=invalid");let rawCart:unknown;try{rawCart=JSON.parse(parsed.data.cart)}catch{redirect("/app/pos?error=invalid")}const validatedCart=cartInput.safeParse(rawCart);if(!validatedCart.success)redirect("/app/pos?error=invalid");const quantities=new Map<string,number>();for(const line of validatedCart.data)quantities.set(line.productId,(quantities.get(line.productId)??0)+line.quantity);const cart=[...quantities].map(([productId,quantity])=>({productId,quantity}));if(cart.some(line=>line.quantity>1000))redirect("/app/pos?error=invalid");const session=await requireSession();
-  const [membership]=await db.select().from(memberships).where(and(eq(memberships.userId,session.user.id),eq(memberships.organizationId,parsed.data.organizationId),eq(memberships.status,"active"))).limit(1);if(!membership||!hasPermission(membership.role as Role,"pos:sell",membership.permissions)||membership.storeId&&membership.storeId!==parsed.data.storeId)redirect("/app");
+  const parsed=checkoutInput.safeParse(Object.fromEntries(formData));if(!parsed.success)redirect("/app/pos?error=invalid");let rawCart:unknown;try{rawCart=JSON.parse(parsed.data.cart)}catch{redirect("/app/pos?error=invalid")}const validatedCart=cartInput.safeParse(rawCart);if(!validatedCart.success)redirect("/app/pos?error=invalid");const quantities=new Map<string,number>();for(const line of validatedCart.data)quantities.set(line.productId,(quantities.get(line.productId)??0)+line.quantity);const cart=[...quantities].map(([productId,quantity])=>({productId,quantity}));if(cart.some(line=>line.quantity>1000))redirect("/app/pos?error=invalid");const {session}=await requireStorePermission(parsed.data.organizationId,parsed.data.storeId,"pos:sell");
   let orderNumber="";
   try{await db.transaction(async tx=>{
     const [duplicate]=await tx.select().from(sales).where(eq(sales.idempotencyKey,parsed.data.idempotencyKey)).limit(1);if(duplicate){orderNumber=duplicate.orderNumber;return;}
