@@ -31,6 +31,11 @@ Self-hostable consignment retail SaaS. The existing Sites application remains th
 - Configurable storefront GST, HST, PST, and QST components
 - Built-in multi-vendor POS cart with cash, card, and external payment recording
 - Atomic checkout with stock locks, oversell protection, idempotency, tax breakdowns, and commission snapshots
+- Searchable sales history and printable transaction receipts
+- Partial and full refunds with optional inventory restocking
+- Exact commission, tax, and vendor-net reversals for refunded items
+- Monthly owner payout summaries with sales, refunds, commission, rent, and tax
+- Isolated vendor statements with sales history and estimated payout
 - PostgreSQL migration in `drizzle/`
 - Core store, vendor, rental space, inventory, sale, commission, and audit models
 
