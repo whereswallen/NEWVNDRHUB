@@ -36,6 +36,11 @@ Self-hostable consignment retail SaaS. The existing Sites application remains th
 - Exact commission, tax, and vendor-net reversals for refunded items
 - Monthly owner payout summaries with sales, refunds, commission, rent, and tax
 - Isolated vendor statements with sales history and estimated payout
+- Immutable finalized payout snapshots by vendor and month
+- Manual, e-transfer, cheque, and Stripe payment-status recording
+- Payment references, notes, paid timestamps, and audit events
+- Store-scoped payout access for managers
+- Vendor payout history and UTF-8 CSV exports
 - PostgreSQL migration in `drizzle/`
 - Core store, vendor, rental space, inventory, sale, commission, and audit models
 
