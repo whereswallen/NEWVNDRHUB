@@ -26,6 +26,11 @@ Self-hostable consignment retail SaaS. The existing Sites application remains th
 - Vendor creation with concurrency-safe plan-limit enforcement
 - Historical rental assignments that snapshot the agreed monthly rent
 - Email-locked vendor invitations and an isolated vendor portal
+- Owner, manager, and vendor product creation within their permitted scope
+- Append-only stock receipts, corrections, damage, returns, and removals
+- Configurable storefront GST, HST, PST, and QST components
+- Built-in multi-vendor POS cart with cash, card, and external payment recording
+- Atomic checkout with stock locks, oversell protection, idempotency, tax breakdowns, and commission snapshots
 - PostgreSQL migration in `drizzle/`
 - Core store, vendor, rental space, inventory, sale, commission, and audit models
 
