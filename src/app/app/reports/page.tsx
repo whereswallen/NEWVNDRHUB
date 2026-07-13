@@ -3,8 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
-  memberships,
-  organizations,
   refundItems,
   refunds,
   rentalAssignments,
@@ -12,9 +10,8 @@ import {
   sales,
   vendors,
 } from "@/db/schema";
-import { requireSession } from "@/lib/current-user";
+import { requireCurrentOrganizationPermission } from "@/lib/access";
 import { formatCad } from "@/lib/money";
-import { hasPermission, Role } from "@/lib/permissions";
 
 function monthRange(value?: string) {
   const valid = /^\d{4}-\d{2}$/.test(value ?? "")
@@ -33,29 +30,9 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
-  const session = await requireSession();
   const query = await searchParams;
   const range = monthRange(query.month);
-  const [context] = await db
-    .select({ membership: memberships, organization: organizations })
-    .from(memberships)
-    .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
-    .where(
-      and(
-        eq(memberships.userId, session.user.id),
-        eq(memberships.status, "active"),
-      ),
-    )
-    .limit(1);
-  if (
-    !context ||
-    !hasPermission(
-      context.membership.role as Role,
-      "payouts:read",
-      context.membership.permissions,
-    )
-  )
-    redirect("/app");
+  const context = await requireCurrentOrganizationPermission("payouts:read");
   const vendorScope = [eq(vendors.organizationId, context.organization.id)];
   const saleScope = [
     eq(sales.organizationId, context.organization.id),
