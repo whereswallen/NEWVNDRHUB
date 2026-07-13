@@ -17,6 +17,10 @@ Self-hostable consignment retail SaaS. The existing Sites application remains th
 - Transactional organization and first storefront onboarding
 - 14 day trial with Standard or Unlimited plan selection
 - Protected application workspace and tenant membership checks
+- Global VNDR Hub platform administrator registry and customer overview
+- Store-scoped manager and staff invitations with hashed, expiring tokens
+- Role-specific navigation that keeps POS away from vendor accounts
+- Employee acceptance flow locked to the invited email address
 - PostgreSQL migration in `drizzle/`
 - Core store, vendor, rental space, inventory, sale, commission, and audit models
 

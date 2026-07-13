@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
-export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
+export function AuthForm({ mode, next = "/app" }: { mode: "sign-in" | "sign-up"; next?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -23,7 +23,8 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       : await authClient.signIn.email({ email, password });
     setPending(false);
     if (result.error) return setError(result.error.message ?? "We could not complete that request.");
-    router.push(signingUp ? "/onboarding" : "/app");
+    const destination = next.startsWith("/") && !next.startsWith("//") ? next : "/app";
+    router.push(signingUp && destination === "/app" ? "/onboarding" : destination);
     router.refresh();
   }
 
@@ -39,6 +40,6 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="primary-button" disabled={pending}>{pending ? "Please wait..." : signingUp ? "Create account" : "Sign in"}</button>
     </form>
-    <p className="switch-link">{signingUp ? "Already have an account?" : "New to VNDR Hub?"} <Link href={signingUp ? "/sign-in" : "/sign-up"}>{signingUp ? "Sign in" : "Start a trial"}</Link></p>
+    <p className="switch-link">{signingUp ? "Already have an account?" : "New to VNDR Hub?"} <Link href={`${signingUp ? "/sign-in" : "/sign-up"}?next=${encodeURIComponent(next)}`}>{signingUp ? "Sign in" : "Create an account"}</Link></p>
   </section></main>;
 }
