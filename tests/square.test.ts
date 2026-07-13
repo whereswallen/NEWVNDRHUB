@@ -1,0 +1,2 @@
+import test from "node:test";import assert from "node:assert/strict";import {createHmac} from "node:crypto";import {verifySquareSignature} from "../src/lib/square";
+test("Square webhook signatures include URL and raw body",()=>{const body='{"event_id":"1"}',url="https://app.vndrhub.ca/api/square/webhook",key="secret",signature=createHmac("sha256",key).update(url+body).digest("base64");assert.equal(verifySquareSignature(body,signature,key,url),true);assert.equal(verifySquareSignature(body,"invalid",key,url),false)});
