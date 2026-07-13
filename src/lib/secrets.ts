@@ -1,0 +1,4 @@
+import {createCipheriv,createDecipheriv,randomBytes} from "node:crypto";
+function key(){const raw=process.env.INTEGRATION_ENCRYPTION_KEY;if(!raw)throw new Error("INTEGRATION_ENCRYPTION_KEY is not configured");const value=Buffer.from(raw,"base64");if(value.length!==32)throw new Error("INTEGRATION_ENCRYPTION_KEY must be a base64 encoded 32 byte key");return value}
+export function encryptSecret(value:string){const iv=randomBytes(12),cipher=createCipheriv("aes-256-gcm",key(),iv),encrypted=Buffer.concat([cipher.update(value,"utf8"),cipher.final()]),tag=cipher.getAuthTag();return [iv,tag,encrypted].map(part=>part.toString("base64url")).join(".")}
+export function decryptSecret(value:string){const [iv,tag,encrypted]=value.split(".").map(part=>Buffer.from(part,"base64url"));const decipher=createDecipheriv("aes-256-gcm",key(),iv);decipher.setAuthTag(tag);return Buffer.concat([decipher.update(encrypted),decipher.final()]).toString("utf8")}

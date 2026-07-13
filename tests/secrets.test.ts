@@ -1,0 +1,2 @@
+import test from "node:test";import assert from "node:assert/strict";import {randomBytes} from "node:crypto";import {decryptSecret,encryptSecret} from "../src/lib/secrets";
+test("integration secrets use authenticated encryption",()=>{process.env.INTEGRATION_ENCRYPTION_KEY=randomBytes(32).toString("base64");const encrypted=encryptSecret("secret-token");assert.notEqual(encrypted,"secret-token");assert.equal(decryptSecret(encrypted),"secret-token");assert.throws(()=>decryptSecret(encrypted.slice(0,-2)+"aa"))});
