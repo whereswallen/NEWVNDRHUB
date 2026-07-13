@@ -12,8 +12,8 @@ checksum="${encrypted}.sha256"
 temporary="$(mktemp)"
 trap 'rm -f "$temporary"' EXIT HUP INT TERM
 
-docker compose -f docker-compose.production.yml exec -T postgres \
-  pg_dump --format=custom --no-owner --no-acl -U vndrhub vndrhub > "$temporary"
+docker compose -f docker-compose.production.yml exec -T postgres sh -ec \
+  'PGPASSWORD="$(cat /run/secrets/postgres_backup_password)" pg_dump --format=custom --no-owner --no-acl -U vndrhub_backup vndrhub' > "$temporary"
 test -s "$temporary" || { echo "Backup failed" >&2; exit 1; }
 age -r "$AGE_RECIPIENT" -o "$encrypted" "$temporary"
 sha256sum "$encrypted" > "$checksum"
