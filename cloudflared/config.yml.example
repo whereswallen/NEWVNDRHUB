@@ -1,0 +1,9 @@
+tunnel: REPLACE_WITH_CLOUDFLARE_TUNNEL_UUID
+credentials-file: /etc/cloudflared/REPLACE_WITH_CLOUDFLARE_TUNNEL_UUID.json
+
+ingress:
+  - hostname: app.vndrhub.ca
+    service: https://127.0.0.1:443
+    originRequest:
+      noTLSVerify: false
+  - service: http_status:404
